@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import fs from 'fs';
+import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { getAllFiles, buildFileTree, readFileContent } from '../utils/fileUtils.js';
 import * as db from '../database/queries.js';
@@ -13,8 +14,9 @@ const router = Router();
  */
 router.get(
   '/',
+  authenticate,
   asyncHandler(async (req, res) => {
-    const projects = db.getAllProjects();
+    const projects = db.getAllProjects(req.user.id);
     res.json({ success: true, data: projects });
   })
 );
@@ -25,9 +27,10 @@ router.get(
  */
 router.get(
   '/:id',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
@@ -54,9 +57,10 @@ router.get(
  */
 router.get(
   '/:id/tree',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
@@ -81,9 +85,10 @@ router.get(
  */
 router.get(
   '/:id/file',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
@@ -126,9 +131,10 @@ router.get(
  */
 router.delete(
   '/:id',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 

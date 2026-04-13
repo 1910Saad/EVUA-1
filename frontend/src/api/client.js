@@ -4,6 +4,20 @@ const api = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '') + '/',
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const authApi = {
+  login: (username, password) => api.post('auth/login', { username, password }),
+  register: (username, password) => api.post('auth/register', { username, password }),
+  me: () => api.get('auth/me'),
+};
+
 export const projectApi = {
   uploadProject: async (file) => {
     const formData = new FormData();
@@ -60,11 +74,13 @@ export const upgradeApi = {
 export const downloadApi = {
   downloadUpgraded: (id) => {
     const baseUrl = api.defaults.baseURL.replace(/\/$/, "");
-    window.location.href = `${baseUrl}/download/${id}`;
+    const token = localStorage.getItem('token');
+    window.location.href = `${baseUrl}/download/${id}?token=${token}`;
   },
   downloadOriginal: (id) => {
     const baseUrl = api.defaults.baseURL.replace(/\/$/, "");
-    window.location.href = `${baseUrl}/download/${id}/original`;
+    const token = localStorage.getItem('token');
+    window.location.href = `${baseUrl}/download/${id}/original?token=${token}`;
   },
 };
 

@@ -4,15 +4,34 @@ import { getDb } from './init.js';
  * Agent 3: Database — Query helper functions for all tables.
  */
 
+// ============ USERS ============
+
+export function createUser(username, hashedPassword) {
+  const db = getDb();
+  const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
+  const info = stmt.run(username, hashedPassword);
+  return info.lastInsertRowid;
+}
+
+export function getUserByUsername(username) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+}
+
+export function getUserById(id) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+}
+
 // ============ PROJECTS ============
 
-export function createProject({ id, name, originalPath, fileCount, totalSize }) {
+export function createProject({ id, name, originalPath, fileCount, totalSize, userId }) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO projects (id, name, original_path, file_count, total_size)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO projects (id, name, original_path, file_count, total_size, user_id)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
-  return stmt.run(id, name, originalPath, fileCount || 0, totalSize || 0);
+  return stmt.run(id, name, originalPath, fileCount || 0, totalSize || 0, userId || null);
 }
 
 export function getProject(id) {
@@ -20,8 +39,11 @@ export function getProject(id) {
   return db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
 }
 
-export function getAllProjects() {
+export function getAllProjects(userId) {
   const db = getDb();
+  if (userId) {
+    return db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+  }
   return db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
 }
 
@@ -171,6 +193,7 @@ export function clearDiffResults(projectId) {
 }
 
 export default {
+  createUser, getUserByUsername, getUserById,
   createProject, getProject, getAllProjects, updateProject, deleteProject,
   addTechnology, getTechnologies, clearTechnologies,
   addSuggestion, getSuggestions, updateSuggestionStatus, clearSuggestions,

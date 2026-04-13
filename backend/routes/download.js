@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { createZip } from '../utils/zipUtils.js';
 import * as db from '../database/queries.js';
@@ -14,9 +15,10 @@ const router = Router();
  */
 router.get(
   '/:id',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
@@ -57,9 +59,10 @@ router.get(
  */
 router.get(
   '/:id/original',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 

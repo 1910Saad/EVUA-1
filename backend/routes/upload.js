@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import upload from '../middleware/upload.js';
+import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { extractZip } from '../utils/zipUtils.js';
 import { getAllFiles, buildFileTree, getTotalSize } from '../utils/fileUtils.js';
@@ -15,6 +16,7 @@ const router = Router();
  */
 router.post(
   '/',
+  authenticate,
   upload.single('project'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -51,6 +53,7 @@ router.post(
       originalPath: originalDir,
       fileCount: files.length,
       totalSize,
+      userId: req.user.id
     });
 
     logger.info('Project uploaded successfully', {

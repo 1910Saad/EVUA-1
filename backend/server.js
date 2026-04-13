@@ -13,6 +13,7 @@ import uploadRoutes from './routes/upload.js';
 import projectRoutes from './routes/projects.js';
 import upgradeRoutes from './routes/upgrade.js';
 import downloadRoutes from './routes/download.js';
+import authRoutes from './routes/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +40,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/upgrade', upgradeRoutes);
 app.use('/api/download', downloadRoutes);
+app.use('/api/auth', authRoutes);
 
 // ─── Health Check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

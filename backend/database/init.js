@@ -23,6 +23,12 @@ export function initDatabase() {
 
   // Create tables
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -109,6 +115,17 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_history_project ON upgrade_history(project_id);
     CREATE INDEX IF NOT EXISTS idx_diffs_project ON diff_results(project_id);
   `);
+
+  // Add user_id to projects dynamically if it doesn't exist
+  try {
+    const tableInfo = db.prepare('PRAGMA table_info(projects)').all();
+    const hasUserId = tableInfo.some(col => col.name === 'user_id');
+    if (!hasUserId) {
+      db.exec('ALTER TABLE projects ADD COLUMN user_id INTEGER REFERENCES users(id)');
+    }
+  } catch (err) {
+    logger.error('Failed to alter projects table', { error: err.message });
+  }
 
   logger.info('Database initialized successfully', { path: config.databasePath });
   return db;

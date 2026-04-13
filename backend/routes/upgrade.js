@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { runPipeline, getPipelineProgress, getStages } from '../pipeline/orchestrator.js';
 import * as db from '../database/queries.js';
@@ -12,9 +13,10 @@ const router = Router();
  */
 router.post(
   '/:id',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
@@ -55,7 +57,12 @@ router.post(
  */
 router.get(
   '/:id/progress',
+  authenticate,
   asyncHandler(async (req, res) => {
+    const project = db.getProject(req.params.id);
+    if (!project || project.user_id !== req.user.id) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
     const progress = getPipelineProgress(req.params.id);
 
     if (!progress) {
@@ -75,9 +82,10 @@ router.get(
  */
 router.get(
   '/:id/results',
+  authenticate,
   asyncHandler(async (req, res) => {
     const project = db.getProject(req.params.id);
-    if (!project) {
+    if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 

@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Cpu, History, UploadCloud, Github } from 'lucide-react';
+import { Cpu, History, UploadCloud, Github, LogOut, User } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: 'Upload & Upgrade', path: '/', icon: UploadCloud },
@@ -45,7 +47,20 @@ const Layout = () => {
             })}
           </nav>
 
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
+            {user && (
+              <div className="hidden md:flex items-center text-sm text-slate-400">
+                <User className="w-4 h-4 mr-2" />
+                {user.username}
+              </div>
+            )}
+            <button 
+              onClick={logout}
+              className="p-2 text-muted-foreground hover:text-red-400 transition-colors rounded-md hover:bg-red-500/10 flex items-center"
+              title="Log Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
             <a href="https://github.com" target="_blank" rel="noreferrer" className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50">
               <Github className="w-5 h-5" />
             </a>
