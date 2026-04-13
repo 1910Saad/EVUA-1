@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8-alpine
+    environment:
+      MYSQL_ROOT_PASSWORD: Saad@1910
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Saad@1910
+      MYSQL_DATABASE: dataflow
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=dataflow
+      - DB_USER=root
+      - DB_PASSWORD=Saad@1910
+      - PORT=3001
+      - JWT_SECRET=change-this-in-production
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

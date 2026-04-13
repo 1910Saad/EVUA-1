@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  evua:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: evua-app
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persist SQLite Database & Config data
+      - evua-data:/app/backend/data
+      # Ephemeral or persistent storage for uploads 
+      - evua-uploads:/app/backend/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # IMPORTANT: If using AI Agent mapping, provide your key here
+      # - AI_API_KEY=your-api-key-here
+      # - AI_API_URL=https://api.openai.com/v1/chat/completions
+      # - AI_MODEL=gpt-4o
+
+volumes:
+  evua-data:
+  evua-uploads:

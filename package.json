@@ -1,0 +1,14 @@
+{
+  "name": "evua",
+  "version": "1.0.0",
+  "description": "EVUA - AI-Powered Legacy Code Upgrade Assistant",
+  "scripts": {
+    "postinstall": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && node server.js",
+    "dev": "npm run dev",
+    "clean": "rm -rf backend/node_modules frontend/node_modules frontend/dist"
+  }
+}
