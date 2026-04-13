@@ -25,7 +25,7 @@ const app = express();
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(cors({
-  origin: ['https://evua.netlify.app', 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  origin: '*', // Allow all origins for the API since it is split from the frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -51,14 +51,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ─── Frontend Serving (Production) ───────────────────────────
-if (config.nodeEnv === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-  app.get('*', (req, res, next) => {
-    if (req.originalUrl.startsWith('/api/')) return next();
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-}
+// ─── Base Route (for split environments) ─────────────────────
+app.get('/', (req, res) => {
+  res.json({ message: "EVUA API is active and running." });
+});
 
 // ─── Error Handler ───────────────────────────────────────────
 app.use(errorHandler);
