@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import * as db from '../database/queries.js';
 import { signToken, authenticate } from '../middleware/auth.js';
