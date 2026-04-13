@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 export const projectApi = {
@@ -59,10 +59,12 @@ export const upgradeApi = {
 
 export const downloadApi = {
   downloadUpgraded: (id) => {
-    window.location.href = `/api/download/${id}`;
+    const baseUrl = api.defaults.baseURL.replace(/\/$/, "");
+    window.location.href = `${baseUrl}/download/${id}`;
   },
   downloadOriginal: (id) => {
-    window.location.href = `/api/download/${id}/original`;
+    const baseUrl = api.defaults.baseURL.replace(/\/$/, "");
+    window.location.href = `${baseUrl}/download/${id}/original`;
   },
 };
 
