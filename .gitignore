@@ -9,3 +9,7 @@
 .env.test
 .env.local
 .env.docker
+
+# Storage & Database
+/backend/uploads
+/backend/data

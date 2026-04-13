@@ -1,195 +1,148 @@
-import { getDb } from './init.js';
-
-/**
- * Agent 3: Database — Query helper functions for all tables.
- */
+import { 
+  User, Project, Technology, Suggestion, History, PipelineRun, DiffResult 
+} from './models.js';
 
 // ============ USERS ============
 
-export function createUser(username, hashedPassword) {
-  const db = getDb();
-  const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-  const info = stmt.run(username, hashedPassword);
-  return info.lastInsertRowid;
+export async function createUser(username, hashedPassword) {
+  const user = new User({ username, password: hashedPassword });
+  const saved = await user.save();
+  return saved._id;
 }
 
-export function getUserByUsername(username) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+export async function getUserByUsername(username) {
+  return User.findOne({ username }).lean();
 }
 
-export function getUserById(id) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+export async function getUserById(id) {
+  return User.findById(id).lean();
 }
 
 // ============ PROJECTS ============
 
-export function createProject({ id, name, originalPath, fileCount, totalSize, userId }) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO projects (id, name, original_path, file_count, total_size, user_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(id, name, originalPath, fileCount || 0, totalSize || 0, userId || null);
+export async function createProject({ id, name, originalPath, fileCount, totalSize, userId }) {
+  const project = new Project({
+    id, name, original_path: originalPath, file_count: fileCount || 0, total_size: totalSize || 0, user_id: userId || null
+  });
+  return project.save();
 }
 
-export function getProject(id) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+export async function getProject(id) {
+  const proj = await Project.findOne({ id }).lean();
+  if (proj && proj.user_id) proj.user_id = proj.user_id.toString();
+  return proj;
 }
 
-export function getAllProjects(userId) {
-  const db = getDb();
-  if (userId) {
-    return db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC').all(userId);
-  }
-  return db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
+export async function getAllProjects(userId) {
+  const query = userId ? { user_id: userId } : {};
+  return Project.find(query).sort({ created_at: -1 }).lean();
 }
 
-export function updateProject(id, fields) {
-  const db = getDb();
+export async function updateProject(id, fields) {
   const allowed = ['name', 'upgraded_path', 'status', 'file_count', 'total_size'];
-  const updates = [];
-  const values = [];
-
+  const updateDoc = {};
   for (const [key, value] of Object.entries(fields)) {
     if (allowed.includes(key)) {
-      updates.push(`${key} = ?`);
-      values.push(value);
+      updateDoc[key] = value;
     }
   }
-
-  if (updates.length === 0) return null;
-  updates.push("updated_at = datetime('now')");
-  values.push(id);
-
-  const stmt = db.prepare(`UPDATE projects SET ${updates.join(', ')} WHERE id = ?`);
-  return stmt.run(...values);
+  updateDoc.updated_at = new Date();
+  return Project.updateOne({ id }, { $set: updateDoc });
 }
 
-export function deleteProject(id) {
-  const db = getDb();
-  return db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+export async function deleteProject(id) {
+  return Project.deleteOne({ id });
 }
 
 // ============ TECHNOLOGIES ============
 
-export function addTechnology({ projectId, name, category, currentVersion, latestVersion, filePath, confidence }) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO technologies (project_id, name, category, current_version, latest_version, file_path, confidence)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(projectId, name, category, currentVersion || null, latestVersion || null, filePath || null, confidence || 1.0);
+export async function addTechnology({ projectId, name, category, currentVersion, latestVersion, filePath, confidence }) {
+  const tech = new Technology({
+    project_id: projectId, name, category, current_version: currentVersion, latest_version: latestVersion, file_path: filePath, confidence: confidence || 1.0
+  });
+  return tech.save();
 }
 
-export function getTechnologies(projectId) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM technologies WHERE project_id = ? ORDER BY category, name').all(projectId);
+export async function getTechnologies(projectId) {
+  return Technology.find({ project_id: projectId }).sort({ category: 1, name: 1 }).lean();
 }
 
-export function clearTechnologies(projectId) {
-  const db = getDb();
-  return db.prepare('DELETE FROM technologies WHERE project_id = ?').run(projectId);
+export async function clearTechnologies(projectId) {
+  return Technology.deleteMany({ project_id: projectId });
 }
 
 // ============ UPGRADE SUGGESTIONS ============
 
-export function addSuggestion({ projectId, technology, description, priority, category, autoFixable, filePath, lineStart, lineEnd, originalCode, suggestedCode }) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO upgrade_suggestions (project_id, technology, description, priority, category, auto_fixable, file_path, line_start, line_end, original_code, suggested_code)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(projectId, technology, description, priority || 'medium', category, autoFixable ? 1 : 0, filePath || null, lineStart || null, lineEnd || null, originalCode || null, suggestedCode || null);
+export async function addSuggestion({ projectId, technology, description, priority, category, autoFixable, filePath, lineStart, lineEnd, originalCode, suggestedCode }) {
+  const sug = new Suggestion({
+    project_id: projectId, technology, description, priority: priority || 'medium', category, auto_fixable: !!autoFixable, file_path: filePath, line_start: lineStart, line_end: lineEnd, original_code: originalCode, suggested_code: suggestedCode
+  });
+  return sug.save();
 }
 
-export function getSuggestions(projectId) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM upgrade_suggestions WHERE project_id = ? ORDER BY priority DESC, category').all(projectId);
+export async function getSuggestions(projectId) {
+  return Suggestion.find({ project_id: projectId }).sort({ priority: -1, category: 1 }).lean();
 }
 
-export function updateSuggestionStatus(id, status) {
-  const db = getDb();
-  return db.prepare('UPDATE upgrade_suggestions SET status = ? WHERE id = ?').run(status, id);
+export async function updateSuggestionStatus(id, status) {
+  return Suggestion.updateOne({ _id: id }, { $set: { status } });
 }
 
-export function clearSuggestions(projectId) {
-  const db = getDb();
-  return db.prepare('DELETE FROM upgrade_suggestions WHERE project_id = ?').run(projectId);
+export async function clearSuggestions(projectId) {
+  return Suggestion.deleteMany({ project_id: projectId });
 }
 
 // ============ UPGRADE HISTORY ============
 
-export function addHistoryEntry({ projectId, agent, action, filePath, description, status, details }) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO upgrade_history (project_id, agent, action, file_path, description, status, details)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(projectId, agent, action, filePath || null, description || null, status || 'success', details ? JSON.stringify(details) : null);
+export async function addHistoryEntry({ projectId, agent, action, filePath, description, status, details }) {
+  const hist = new History({
+    project_id: projectId, agent, action, file_path: filePath, description, status: status || 'success', details
+  });
+  return hist.save();
 }
 
-export function getHistory(projectId) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM upgrade_history WHERE project_id = ? ORDER BY created_at DESC').all(projectId);
+export async function getHistory(projectId) {
+  return History.find({ project_id: projectId }).sort({ created_at: -1 }).lean();
 }
 
 // ============ PIPELINE RUNS ============
 
-export function createPipelineRun(projectId) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO pipeline_runs (project_id, status, started_at)
-    VALUES (?, 'running', datetime('now'))
-  `);
-  return stmt.run(projectId);
+export async function createPipelineRun(projectId) {
+  const run = new PipelineRun({ project_id: projectId });
+  const saved = await run.save();
+  return saved._id.toString(); // Return inserted string ID to orchestrator
 }
 
-export function updatePipelineRun(id, fields) {
-  const db = getDb();
+export async function updatePipelineRun(id, fields) {
   const allowed = ['status', 'current_stage', 'progress', 'completed_at', 'error'];
-  const updates = [];
-  const values = [];
-
+  const updateDoc = {};
   for (const [key, value] of Object.entries(fields)) {
     if (allowed.includes(key)) {
-      updates.push(`${key} = ?`);
-      values.push(value);
+      updateDoc[key] = value;
     }
   }
-
-  if (updates.length === 0) return null;
-  values.push(id);
-
-  return db.prepare(`UPDATE pipeline_runs SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  return PipelineRun.updateOne({ _id: id }, { $set: updateDoc });
 }
 
-export function getLatestPipelineRun(projectId) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM pipeline_runs WHERE project_id = ? ORDER BY created_at DESC LIMIT 1').get(projectId);
+export async function getLatestPipelineRun(projectId) {
+  return PipelineRun.findOne({ project_id: projectId }).sort({ created_at: -1 }).lean();
 }
 
 // ============ DIFF RESULTS ============
 
-export function addDiffResult({ projectId, filePath, originalContent, upgradedContent, diffContent, changeType }) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO diff_results (project_id, file_path, original_content, upgraded_content, diff_content, change_type)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(projectId, filePath, originalContent || '', upgradedContent || '', diffContent || '', changeType || 'modified');
+export async function addDiffResult({ projectId, filePath, originalContent, upgradedContent, diffContent, changeType }) {
+  const diff = new DiffResult({
+    project_id: projectId, file_path: filePath, original_content: originalContent, upgraded_content: upgradedContent, diff_content: diffContent, change_type: changeType || 'modified'
+  });
+  return diff.save();
 }
 
-export function getDiffResults(projectId) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM diff_results WHERE project_id = ? ORDER BY file_path').all(projectId);
+export async function getDiffResults(projectId) {
+  return DiffResult.find({ project_id: projectId }).sort({ file_path: 1 }).lean();
 }
 
-export function clearDiffResults(projectId) {
-  const db = getDb();
-  return db.prepare('DELETE FROM diff_results WHERE project_id = ?').run(projectId);
+export async function clearDiffResults(projectId) {
+  return DiffResult.deleteMany({ project_id: projectId });
 }
 
 export default {

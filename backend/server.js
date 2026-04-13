@@ -18,8 +18,8 @@ import authRoutes from './routes/auth.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize database
-initDatabase();
+// Initialize database (Wait for MongoDB to connect before proceeding)
+await initDatabase();
 
 // Create Express app
 const app = express();

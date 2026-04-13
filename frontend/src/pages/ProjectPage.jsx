@@ -121,7 +121,7 @@ const ProjectPage = () => {
         </div>
         
         <div className="flex items-center space-x-3 shrink-0">
-          {project.status === 'uploaded' && (
+          {(project.status === 'uploaded' || project.status === 'pending') && (
             <button 
               onClick={handleStartUpgrade}
               disabled={isStarting}

@@ -15,13 +15,13 @@ router.post('/register', asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Username and password required' });
   }
 
-  const existing = db.getUserByUsername(username);
+  const existing = await db.getUserByUsername(username);
   if (existing) {
     return res.status(409).json({ success: false, error: 'Username already taken' });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const userId = db.createUser(username, hashedPassword);
+  const userId = await db.createUser(username, hashedPassword);
   
   const token = signToken({ id: userId, username });
   res.status(201).json({ success: true, data: { token, user: { id: userId, username } } });
@@ -33,7 +33,7 @@ router.post('/register', asyncHandler(async (req, res) => {
 router.post('/login', asyncHandler(async (req, res) => {
   const { username, password } = req.body;
   
-  const user = db.getUserByUsername(username);
+  const user = await db.getUserByUsername(username);
   if (!user) {
     return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
@@ -51,7 +51,7 @@ router.post('/login', asyncHandler(async (req, res) => {
  * GET /api/auth/me
  */
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
-  const user = db.getUserById(req.user.id);
+  const user = await db.getUserById(req.user.id);
   if (!user) {
     return res.status(404).json({ success: false, error: 'User not found' });
   }

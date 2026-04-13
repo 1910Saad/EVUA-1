@@ -15,7 +15,7 @@ router.post(
   '/:id',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -59,11 +59,11 @@ router.get(
   '/:id/progress',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
-    const progress = getPipelineProgress(req.params.id);
+    const progress = await getPipelineProgress(req.params.id);
 
     if (!progress) {
       return res.status(404).json({
@@ -84,7 +84,7 @@ router.get(
   '/:id/results',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -97,11 +97,11 @@ router.get(
       });
     }
 
-    const technologies = db.getTechnologies(req.params.id);
-    const suggestions = db.getSuggestions(req.params.id);
-    const history = db.getHistory(req.params.id);
-    const diffs = db.getDiffResults(req.params.id);
-    const pipelineRun = db.getLatestPipelineRun(req.params.id);
+    const technologies = await db.getTechnologies(req.params.id);
+    const suggestions = await db.getSuggestions(req.params.id);
+    const history = await db.getHistory(req.params.id);
+    const diffs = await db.getDiffResults(req.params.id);
+    const pipelineRun = await db.getLatestPipelineRun(req.params.id);
 
     res.json({
       success: true,

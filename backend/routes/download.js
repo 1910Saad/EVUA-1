@@ -17,7 +17,7 @@ router.get(
   '/:id',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -61,7 +61,7 @@ router.get(
   '/:id/original',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }

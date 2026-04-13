@@ -47,7 +47,7 @@ router.post(
     const totalSize = getTotalSize(files);
 
     // Save to database
-    db.createProject({
+    await db.createProject({
       id: projectId,
       name: originalName,
       originalPath: originalDir,

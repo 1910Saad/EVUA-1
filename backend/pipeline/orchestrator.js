@@ -38,8 +38,7 @@ export async function runPipeline(projectId, originalDir) {
   logger.info('Pipeline: Starting upgrade pipeline', { projectId, originalDir });
 
   // Create pipeline run in database
-  const pipelineRun = db.createPipelineRun(projectId);
-  const pipelineId = pipelineRun.lastInsertRowid;
+  const pipelineId = await db.createPipelineRun(projectId);
 
   // Initialize progress tracking
   const progress = {
@@ -58,7 +57,7 @@ export async function runPipeline(projectId, originalDir) {
   logger.info('Pipeline: Copying project for upgrade', { from: originalDir, to: upgradedDir });
   copyDirectory(originalDir, upgradedDir);
 
-  db.updateProject(projectId, {
+  await db.updateProject(projectId, {
     upgraded_path: upgradedDir,
     status: 'processing',
   });
@@ -80,9 +79,9 @@ export async function runPipeline(projectId, originalDir) {
     results.stages.analysis = analysisResults;
 
     // Store detected technologies in database
-    db.clearTechnologies(projectId);
+    await db.clearTechnologies(projectId);
     for (const framework of analysisResults.frameworks) {
-      db.addTechnology({
+      await db.addTechnology({
         projectId,
         name: framework.name,
         category: framework.category,
@@ -94,7 +93,7 @@ export async function runPipeline(projectId, originalDir) {
 
     // Store language info as technologies too
     for (const [lang, info] of Object.entries(analysisResults.languages)) {
-      db.addTechnology({
+      await db.addTechnology({
         projectId,
         name: lang,
         category: 'language',
@@ -103,7 +102,7 @@ export async function runPipeline(projectId, originalDir) {
       });
     }
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'Analyzer',
       action: 'analysis_complete',
@@ -123,7 +122,7 @@ export async function runPipeline(projectId, originalDir) {
 
     // Store dependency suggestions
     for (const dep of depResults.outdated) {
-      db.addSuggestion({
+      await db.addSuggestion({
         projectId,
         technology: dep.name,
         description: `Update ${dep.name} from ${dep.currentVersion} to ${dep.latestVersion || 'latest'}`,
@@ -135,7 +134,7 @@ export async function runPipeline(projectId, originalDir) {
     }
 
     for (const dep of depResults.deprecated) {
-      db.addSuggestion({
+      await db.addSuggestion({
         projectId,
         technology: dep.name,
         description: `${dep.name} is deprecated: ${dep.reason}. Replace with ${dep.replacement}`,
@@ -145,7 +144,7 @@ export async function runPipeline(projectId, originalDir) {
       });
     }
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'DependencyManager',
       action: 'dependencies_analyzed',
@@ -166,7 +165,7 @@ export async function runPipeline(projectId, originalDir) {
     // Store transformation suggestions
     for (const transformation of ruleResults.transformations) {
       for (const changeSet of transformation.changes) {
-        db.addSuggestion({
+        await db.addSuggestion({
           projectId,
           technology: changeSet.ruleName,
           description: `${changeSet.ruleName}: ${changeSet.changes.length} changes`,
@@ -179,7 +178,7 @@ export async function runPipeline(projectId, originalDir) {
       }
     }
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'RuleTransformer',
       action: 'rules_applied',
@@ -197,7 +196,7 @@ export async function runPipeline(projectId, originalDir) {
     const aiResults = await applyAiTransformations(upgradedDir, analysisResults);
     results.stages.aiTransform = aiResults;
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'AITransformer',
       action: 'ai_transforms_applied',
@@ -215,7 +214,7 @@ export async function runPipeline(projectId, originalDir) {
     const validationResults = await validateProject(upgradedDir, analysisResults);
     results.stages.validation = validationResults;
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'Validator',
       action: 'validation_complete',
@@ -240,9 +239,9 @@ export async function runPipeline(projectId, originalDir) {
     results.stages.diffs = diffResults;
 
     // Store diffs in database
-    db.clearDiffResults(projectId);
+    await db.clearDiffResults(projectId);
     for (const diff of diffResults.diffs) {
-      db.addDiffResult({
+      await db.addDiffResult({
         projectId,
         filePath: diff.filePath,
         originalContent: diff.originalContent,
@@ -252,7 +251,7 @@ export async function runPipeline(projectId, originalDir) {
       });
     }
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'DiffGenerator',
       action: 'diffs_generated',
@@ -273,18 +272,18 @@ export async function runPipeline(projectId, originalDir) {
     // ═══════════════════════════════════════════
     results.overallStatus = validationResults.passed ? 'success' : 'completed_with_warnings';
 
-    db.updateProject(projectId, {
+    await db.updateProject(projectId, {
       status: results.overallStatus === 'success' ? 'completed' : 'completed_with_warnings',
     });
 
-    db.updatePipelineRun(pipelineId, {
+    await db.updatePipelineRun(pipelineId, {
       status: results.overallStatus,
       progress: 100,
       current_stage: 'complete',
       completed_at: new Date().toISOString(),
     });
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'Orchestrator',
       action: 'pipeline_complete',
@@ -306,14 +305,14 @@ export async function runPipeline(projectId, originalDir) {
     results.overallStatus = 'failed';
     results.error = err.message;
 
-    db.updateProject(projectId, { status: 'failed' });
-    db.updatePipelineRun(pipelineId, {
+    await db.updateProject(projectId, { status: 'failed' });
+    await db.updatePipelineRun(pipelineId, {
       status: 'failed',
       error: err.message,
       completed_at: new Date().toISOString(),
     });
 
-    db.addHistoryEntry({
+    await db.addHistoryEntry({
       projectId,
       agent: 'Orchestrator',
       action: 'pipeline_failed',
@@ -348,18 +347,18 @@ function updateProgress(projectId, pipelineId, stageId, progress) {
   db.updatePipelineRun(pipelineId, {
     current_stage: stageId,
     progress,
-  });
+  }).catch(err => logger.error('Pipeline DB Update Error', { error: err.message }));
 }
 
 /**
  * Get the current progress of a pipeline.
  */
-export function getPipelineProgress(projectId) {
+export async function getPipelineProgress(projectId) {
   const active = activePipelines.get(projectId);
   if (active) return active;
 
   // Check database for completed runs
-  const run = db.getLatestPipelineRun(projectId);
+  const run = await db.getLatestPipelineRun(projectId);
   if (run) {
     return {
       pipelineId: run.id,

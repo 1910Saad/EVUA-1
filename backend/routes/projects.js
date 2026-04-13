@@ -16,7 +16,7 @@ router.get(
   '/',
   authenticate,
   asyncHandler(async (req, res) => {
-    const projects = db.getAllProjects(req.user.id);
+    const projects = await db.getAllProjects(req.user.id);
     res.json({ success: true, data: projects });
   })
 );
@@ -29,15 +29,15 @@ router.get(
   '/:id',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
     // Include technologies and suggestions
-    const technologies = db.getTechnologies(req.params.id);
-    const suggestions = db.getSuggestions(req.params.id);
-    const history = db.getHistory(req.params.id);
+    const technologies = await db.getTechnologies(req.params.id);
+    const suggestions = await db.getSuggestions(req.params.id);
+    const history = await db.getHistory(req.params.id);
 
     res.json({
       success: true,
@@ -59,7 +59,7 @@ router.get(
   '/:id/tree',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -87,7 +87,7 @@ router.get(
   '/:id/file',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -133,7 +133,7 @@ router.delete(
   '/:id',
   authenticate,
   asyncHandler(async (req, res) => {
-    const project = db.getProject(req.params.id);
+    const project = await db.getProject(req.params.id);
     if (!project || project.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -145,7 +145,7 @@ router.delete(
     }
 
     // Delete from database
-    db.deleteProject(req.params.id);
+    await db.deleteProject(req.params.id);
 
     logger.info('Project deleted', { projectId: req.params.id });
     res.json({ success: true, message: 'Project deleted' });
