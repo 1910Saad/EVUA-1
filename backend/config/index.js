@@ -23,8 +23,8 @@ const config = {
   // AI Configuration
   ai: {
     apiKey: process.env.AI_API_KEY || '',
-    apiUrl: process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions',
-    model: process.env.AI_MODEL || 'gpt-4',
+    apiUrl: process.env.AI_API_URL || 'https://generativelanguage.googleapis.com/v1beta/models/',
+    model: process.env.AI_MODEL || 'gemini-2.5-flash',
   },
 
   // Logging

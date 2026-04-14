@@ -164,32 +164,66 @@ async function transformWithAi(content, issues, filePath) {
     : content;
 
   try {
-    const response = await fetch(config.ai.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.ai.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.ai.model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: `${prompt}\n\nFile: ${filePath}\n\nCode:\n\`\`\`\n${truncatedContent}\n\`\`\``,
+    let response;
+    let aiContent;
+
+    // Detect if we are using OpenAI or Gemini based on the URL
+    if (config.ai.apiUrl.includes('generativelanguage.googleapis')) {
+      // Gemini REST API Implementation
+      const geminiUrl = `${config.ai.apiUrl}${config.ai.model}:generateContent?key=${config.ai.apiKey}`;
+      
+      response = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: SYSTEM_PROMPT }]
           },
-        ],
-        temperature: 0.1, // Low temperature for consistent results
-        max_tokens: 4000,
-      }),
-    });
+          contents: [{
+            role: 'user',
+            parts: [{ text: `${prompt}\n\nFile: ${filePath}\n\nCode:\n\`\`\`\n${truncatedContent}\n\`\`\`` }]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4000,
+          }
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`AI API returned ${response.status}: ${response.statusText}`);
+      if (!response.ok) throw new Error(`Gemini API returned ${response.status}: ${response.statusText}`);
+      
+      const data = await response.json();
+      aiContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    } else {
+      // Standard OpenAI REST API Implementation
+      response = await fetch(config.ai.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.ai.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.ai.model,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: `${prompt}\n\nFile: ${filePath}\n\nCode:\n\`\`\`\n${truncatedContent}\n\`\`\``,
+            },
+          ],
+          temperature: 0.1,
+          max_tokens: 4000,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`AI API returned ${response.status}: ${response.statusText}`);
+      
+      const data = await response.json();
+      aiContent = data.choices?.[0]?.message?.content;
     }
-
-    const data = await response.json();
-    const aiContent = data.choices?.[0]?.message?.content;
 
     if (!aiContent) {
       throw new Error('No content in AI response');
