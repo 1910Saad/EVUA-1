@@ -44,7 +44,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const token = signToken(user);
-  res.json({ success: true, data: { token, user: { id: user.id, username: user.username } } });
+  res.json({ success: true, data: { token, user: { id: user._id, username: user.username } } });
 }));
 
 /**
@@ -55,7 +55,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
   if (!user) {
     return res.status(404).json({ success: false, error: 'User not found' });
   }
-  res.json({ success: true, data: { id: user.id, username: user.username } });
+  res.json({ success: true, data: { id: user._id, username: user.username } });
 }));
 
 export default router;
