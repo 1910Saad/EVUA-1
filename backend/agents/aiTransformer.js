@@ -172,27 +172,37 @@ async function transformWithAi(content, issues, filePath) {
       // Gemini REST API Implementation
       const geminiUrl = `${config.ai.apiUrl}${config.ai.model}:generateContent?key=${config.ai.apiKey}`;
       
-      response = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }]
+      let retryCount = 0;
+      while (retryCount < 3) {
+        response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          contents: [{
-            role: 'user',
-            parts: [{ text: `${prompt}\n\nFile: ${filePath}\n\nCode:\n\`\`\`\n${truncatedContent}\n\`\`\`` }]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 4000,
-          }
-        }),
-      });
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: SYSTEM_PROMPT }]
+            },
+            contents: [{
+              role: 'user',
+              parts: [{ text: `${prompt}\n\nFile: ${filePath}\n\nCode:\n\`\`\`\n${truncatedContent}\n\`\`\`` }]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 4000,
+            }
+          }),
+        });
 
-      if (!response.ok) throw new Error(`Gemini API returned ${response.status}: ${response.statusText}`);
+        if (response.ok) break;
+        if (response.status >= 500 && retryCount < 2) {
+          logger.warn(`Agent 7: AI connection unstable (${response.status}), retrying...`);
+          await new Promise(r => setTimeout(r, 2000 * (retryCount + 1))); // Exponential backoff
+          retryCount++;
+        } else {
+          throw new Error(`Gemini API returned ${response.status}: ${response.statusText}`);
+        }
+      }
       
       const data = await response.json();
       aiContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
